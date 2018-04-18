@@ -6,9 +6,8 @@
 [![Coverage Status](https://coveralls.io/repos/zeit/next.js/badge.svg?branch=master)](https://coveralls.io/r/zeit/next.js?branch=master)
 [![Join the community on Spectrum](https://withspectrum.github.io/badge/badge.svg)](https://spectrum.chat/next-js)
 
-NextJS is a minimalistic framework for server-rendered React applications.
 NextJS是一个极简的、为React应用提供服务端渲染的框架
-**Visit [learnnextjs.com](https://learnnextjs.com) to get started with NextJS.**
+**访问 [learnnextjs.com](https://learnnextjs.com) 来开始使用NextJS.**
 
 ---
 
@@ -16,23 +15,23 @@ NextJS是一个极简的、为React应用提供服务端渲染的框架
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
 <!-- https://github.com/thlorenz/doctoc -->
 
-- [如何使用](#how-to-use)
-  - [安装](#setup)
-  - [代码自动分割](#automatic-code-splitting)
+- [如何使用](#如何使用)
+  - [安装](#安装)
+  - [代码自动分割](#代码自动分割)
   - [CSS](#css)
-    - [内置 CSS 支持](#built-in-css-support)
-    - [CSS-in-JS](#css-in-js)
-  - [静态文件服务(如: 图片)](#static-file-serving-eg-images)
-  - [填充 `<head>`](#populating-head)
-  - [数据获取与组件生命周期](#fetching-data-and-component-lifecycle)
-  - [路由](#routing)
-    - [使用`<Link>`组件](#with-link)
-    - [命令式调用](#imperatively)
-      - [路由事件](#router-events)
-      - [浅路由](#shallow-routing)
-    - [使用一个高阶组件](#using-a-higher-order-component)
-  - [预加载页面](#prefetching-pages)
-    - [使用 `<Link>`](#with-link-1)
+    - [内置 CSS 支持](#内置 CSS 支持)
+    - [CSS-in-JS方案](#CSS-in-JS方案)
+  - [静态文件服务 (如：图片)](#静态文件服务 (如：图片))
+  - [自定义`<head>`](#自定义`<head>`)
+  - [数据获取与组件生命周期](#数据获取与组件生命周期)
+  - [路由](#路由)
+    - [使用`<Link>`组件](#使用`<Link>`组件)
+    - [命令式调用](#命令式调用)
+      - [路由事件](#路由事件)
+      - [浅路由](#浅路由)
+    - [高阶组件用法](#高阶组件用法)
+  - [页面预加载](#页面预加载)
+    - [使用`<Link>`组件](#with-link-1)
     - [命令式调用](#imperatively-1)
   - [自定义服务器与路由](#custom-server-and-routing)
   - [动态导入](#dynamic-import)
@@ -148,7 +147,7 @@ export default () =>
 
 更多示例请参见[styled-jsx文档](https://www.npmjs.com/package/styled-jsx) 
 
-#### CSS-in-JS
+#### CSS-in-JS方案
 
 <p><details>
   <summary>
@@ -173,7 +172,7 @@ export default () => <p style={{ color: 'red' }}>hi there</p>
 - [@zeit/next-sass](https://github.com/zeit/next-plugins/tree/master/packages/next-sass)
 - [@zeit/next-less](https://github.com/zeit/next-plugins/tree/master/packages/next-less)
 
-### 静态文件服务 (例如：图片)
+### 静态文件服务 (如：图片)
 
 在你项目的根节点下创建`static`文件夹。你就可以在你的代码中，以`/static/`开头的url来引用其下的文件：
 
@@ -228,7 +227,7 @@ export default () => (
 
 _注意: 在组件被卸载时，会清除`<head>`的内容，因此要确保每个页面`<head>`中的定义的内容是完整的，而不要假定其它页面已经定义过了_
 
-###  数据获取与组件的生命周期
+###  数据获取与组件生命周期
 
 <p><details>
   <summary><b>Examples</b></summary>
@@ -645,7 +644,8 @@ Next.js提供了一个API来允许你实现页面的预加载。
 
 > 由于NextJS只会预加载JS代码。所以当页面返回之后，你可能需要等待数据部分的加载。
 
-#### 使用`<Link>`
+<span id="with-link-1">here</span>
+#### 使用`<Link>`组件
 
 你可以在任意`<Link>`中添加`prefetch`属性，来让NextJS在后台预先下载对应的页面。
 
