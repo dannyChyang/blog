@@ -158,7 +158,7 @@ class ErrorBoundary extends React.Component {
 }
 ```
 
-componentDidCatch(error, info)函数中的info参数包含了详细的报错信息，搭配`<details>`标签，可以在界面上更友好地展示报错堆栈信息：
+componentDidCatch(error, info)函数中的info参数包含了详细的报错信息，搭配`<details>`标签，可以在界面上更友好地展示报错堆栈信息：
 ```
 render() {
     return <details>
