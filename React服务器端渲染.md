@@ -81,11 +81,11 @@ npm run start
 ```
 打开 [http://localhost:3000](http://localhost:3000) 查看应用:
 
-![](https://res.cloudinary.com/css-tricks/image/upload/c_scale,w_1000,f_auto,q_auto/v1497358286/localhost_r84tot.png)
+![](./imgs/localhost_r84tot.webp)
 
 如果你查看渲染后页面的源代码，会看到发送到浏览器的标签只是一个指向javascript文件的链接。这意味着页面内容不能保证被搜索引擎及社交媒体平台抓取：
 
-![](https://res.cloudinary.com/css-tricks/image/upload/c_scale,w_1000,f_auto,q_auto/v1497358332/some-html_mrmpfj.png)
+![](./imgs/some-html_mrmpfj.webp)
 
 ## 添加服务器端渲染
 接下来我们将实现服务端泻染，从而将生成的HTML发送到浏览器。如果你想一次查看所有更改，看一下github上的差异部分。
@@ -152,7 +152,7 @@ const document = data.replace(/<div id="app"><\/div>/, `<div id="app">${html}</d
 },
 ```
 在浏览器中打开 [http://localhost:3000](http://localhost:3000) 查看应用。看！你的页面现在由服务器端渲染。但还有个问题，如果你查看页面源代码。你会注意到，博客API接口返回的内容依然没有包含进来。
-![](https://res.cloudinary.com/css-tricks/image/upload/c_scale,w_1000,f_auto,q_auto/v1497358447/devtools_qx5y1o.png)
+![](imgs/devtools_qx5y1o.webp)
 
 发生了什么事？如果你打开chrome控制台的network面版，就会看到浏览器发出的博客API的请求。
 
@@ -251,7 +251,8 @@ app.get('*', handleRender);
 app.listen(3000);
 ```
 重启服务并浏览[http://localhost:3000](http://localhost:3000)。查看页面源代码，你将看到服务器端返回了包含数据的代码！
-![](https://res.cloudinary.com/css-tricks/image/upload/c_scale,w_1000,f_auto,q_auto/v1497358548/rendered-react_t5neam.png)
+
+![](./imgs/rendered-react_t5neam.webp)
 
 ## 更进一步
 完成了！在服务器端使用React可能有些复杂，特别是数据需要从一些API接口中获得时尤其如此。幸运的是，React社区欣欣向荣，创造了许多有用的工具。如果您对构建大型React应用程序的框架感兴趣，想在客户机和服务器上呈现，可以看看Walmart实验室的[Electrode](https://github.com/electrode-io/electrode)或者[Next.js](https://github.com/zeit/next.js)。如果你想用Ruby渲染React,可以考虑一下Airbnb的[Hypernova](https://github.com/airbnb/hypernova)。
