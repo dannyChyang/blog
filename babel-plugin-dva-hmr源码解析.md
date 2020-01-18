@@ -1,10 +1,10 @@
 `babel-plugin-dva-hmr`插件主要做了一件事：**找到代码中`dvaIns.router()`的语句位置，注入hmr相关代码**
 
-通常，在`dva`中的调用代码会写为这样
+在`dva`中的路由注册代码通常是这样
 ``` js
 dvaIns.router(require('./routers').default);
 ```
-在经过`babel-plugin-dva-hmr`转换后，生成的代码如下
+在经过`babel-plugin-dva-hmr`转换后，生成代码如下
 ```
 (function () {
   var router = require('./routes');
@@ -30,32 +30,33 @@ dvaIns.router(require('./routers').default);
   }
 })();
 ```
-生成后的代码，主要包括3部分。
-1. `dvaIns.router()`编译为执行环境后的部分
-2. `app.use()`部分
+生成后的代码，主要分为三个部分。
+1. `dvaIns.router()`编译为执行环境中可运行代码部分
+2. `app.use({ onHmr: ...})`部分
 3. `if(module.hot)`部分
 
-在其中，第2部分使用`dva`的`onHmr`API处理组件的重载。当hmr发生时，重新渲染一次根组件。
-> `module.hot`是`react-hot-loader`的API
+第2部分主要用来处理组件的热重载。用到了`dva`提供的`onHmr`API。当hmr发生时，会重新渲染一次路由组件。
+> `module.hot`是`react-hot-loader`提供的API
 
-第3部分的`if(module.hot)`，主要处理`model`。当hmr发生时，会重新注销并挂载该model。
-**`model`部分的if代码会根据model的注册数量生成N份**
+第3部分则主要处理`model`相关的重载。当`model`触发hmr，首先调用`dvaIns.unmodel()`注销该`model`，重新引入`model`文件后，使用`dvaIns.model()`重新挂载新的model。
 
-## 实现逻辑
-编辑后需要注入第2和第3部分的代码，整理一下实现思路
-1. 处理`dvaIns.router()`
-    1. 找出`dvaIns.router()`函数的调用
-    2. 解析出`dvaIns.router()`的参数值(组件的引用路径)
-2. 处理`dvaIns.model()`
-    1. 找到`dvaIns.model()`函数的调用
-    1. 解析出`dvaIns.model`调用时的参数值(`model`的引用路径)
+> **这部分的if代码会根据`dvaIns.model()`的挂载的`model`数量生成N份**
+
+## 思路
+为了实现在编译阶段，注入第2和第3部分的代码，首先整理一下实现思路
+1. 处理渲染组件部分
+    1. 查找`dvaIns.router()`调用语句
+    2. 解析出`dvaIns.router(arg)`中`arg`参数的值(即路由组件的导入路径)
+2. 处理`model`部分
+    1. 查找`dvaIns.model()`调用语句
+    2. 解析出`dvaIns.model(arg)`中`arg`参数的值(即挂载`model`的导入路径)
 3. 使用`onHmr`API和`module.hot`生成hmr代码
-4. 将生成的hmr代码放到源代码中`dvaIns.router()`语句之后。（这里使用的是替换）。
+4. 将源代码中`dvaIns.router()`的语句替换为`hmr`相关代码
 
-### babel插件
-`babel`插件的语法是一个返回了`visitor`对象的函数。
+## babel插件
+`babel`插件是一个返回了`visitor`对象的函数。
 
-在`visitor`对象上可以定义一系列`hook`函数，**在babel解析AST时，将解析`path`传入相应`hook`函数中进行二次加工**。
+在`visitor`对象上可以定义一系列`hook`函数，**在babel解析为AST之后，可以将解析出的语句的路径对象`path`，传入相应`hook`函数中进行二次加工**。
 ``` js
 {
     visitor: {
@@ -64,8 +65,10 @@ dvaIns.router(require('./routers').default);
 }
 ```
 
-### 实现思路
-`dvaIns.router`和`dvaIns.model`都是函数调用，因此可以使用`CallExpression hook`来找出所有函数调用语法，进行下一步处理
+## 实现逻辑
+`dvaIns.router()`和`dvaIns.model()`都是函数调用，因此可以使用`CallExpression hook`来找出所有函数调用语法，进行下一步处理。
+
+下面代码中，首先使用`isRouterCall()`与`isModelCall()`来区分出`router()`和`model()`的调用。
 ``` js
 CallExpression(path, state) {
   if (isRouterCall(callee, path.scope)) {
@@ -75,9 +78,9 @@ CallExpression(path, state) {
   }
 }
 ```
-上面代码中，使用`isRouterCall`与`isModelCall`来区分出`dvaIns.router()`和`dvaIns.model`的调用。
 
 ### `dvaIns.model()`的处理
+首先是代码中`model`导入路径的收集，使用`getRequirePath()`来解析`model`的导入路径，然后放入缓存`modelPaths`变量中。
 ``` js
 // CallExpression
 const modelPaths = {};
@@ -87,9 +90,7 @@ if (isModelCall(callee, path.scope)) {
   modelPaths[filename].push(getRequirePath(args[0], path.scope));
 }
 ```
-使用`getRequirePath(args[0], path.scope)`解析出`model`的引用路径。然后缓存进`modelPaths`变量中。
-
-在之后生成代码时，会遍历`modelPaths`生成N份`if(module.hot)`代码段
+取得代码中所有`model`的导入路径之后，在解析`dva.router()`并生成hmr代码时，将遍历`modelPaths`并生成 N 份`if(module.hot)`代码段。
 ``` js
 // getHmrString()
 modelPaths.map(modelPath => `
@@ -110,8 +111,10 @@ modelPaths.map(modelPath => `
 `)
 ```
 
-
 ### `dvaIns.router()`的处理
+针对`router组件`的处理与`model()`相似，使用`getRequirePath()`获取渲染组件`module`的导入路径后，连同`routerPath`对象一起，调用`getHmrString()`函数生成注入代码。
+
+最后使用`replaceWithSourceString`API，将源代码中`dvaIns.router()`的语句替换为`hmr`代码替。
 ``` js
 // CallExpression
 if (isRouterCall(callee, path.scope)) {
@@ -130,50 +133,57 @@ if (isRouterCall(callee, path.scope)) {
   }
 }
 ```
-上面代码中，使用`getRequirePath(args[0], path.scope)`函数获取渲染组件的引用路径后，连同`dvaIns.model()`函数收集的`routerPath`对象一起，调用`getHmrString()`函数生成注入代码。最后使用`replaceWithSourceString`，替换源代码中`dvaIns.router()`语句为注入代码。
+在了解了`babel-plugin-dva-hmr`的实现逻辑后，做一下小结：
+- 该插件的实现，主要是找到代码中`dvaIns.router()`的语句位置，注入hmr相关代码
+- 基于`module.hot`API，实现`hmr`的本质是收集`router组件`与`model`的导入路径，通过重新渲染、重新挂载的方式实现热重载
+- 该插件只能针对`dvaIns.model()`的`model`实现`hmr`，没有实现`dva/dynamic`引入的model。
+- `module.hot.accept`API通过二次导入来实现重载。因此要将model定义在单独的文件中，不要与`dvaIns.model()`调用在同一作用域。
+
+> 由于 `dva/dynamic` 中 `model` 没有实现`hmr`，这部分逻辑需要自己实现。
 
 ## 工具函数
 ### getRequirePath
-作用：**解析`dvaIns.model()`语法中的实参值。**
+作用：**解析导入语法中实参的值。**
 
-要兼容处理以下3种传参类型：
-##### 1. 属性
+要考虑处理以下三种参数类型场景：
+#### 1. 属性
 ``` js
 dvaIns.model(require('./modelA').default)
 ```
-识别出的`N.default`是取`default`属性，使用`MemberExpression`来捕获这种语法。
+识别出的参数`X.default`是`member表达式`，因此使用`MemberExpression`来区分处理这种语法。
 
-##### 2. 函数调用
+#### 2. 函数调用
 ``` js
 dvaIns.model(require('./modelA'))
 ```
-此时识别出的是`require()`函数调用，使用`CallExpression`来捕获该语法。
+参数`require()`是函数调用，使用`CallExpression`来捕获该语法。
 
-##### 3. 变量标识
+#### 3. 变量标识
 ``` js
 dvaIns.model(modelC)
 ```
-`modelC`是一个变量，使用`Identifier`来捕获标识符。然后使用`getImportRequirePath`进一步处理，找出该变量的值。
+`modelC`是一个变量，使用`Identifier`来匹配标识符场景。然后使用`getImportRequirePath`进一步处理，找出该变量的值。
 
 ### getImportRequirePath
 作用：**获取导入语句实参的值**
 
-在上面`getRequirePath`的处理逻辑中，当传参数是`Identifier`类型时，需要进一步查找变量的值。这部分逻辑由`getImportRequirePath`来完成。
+在上面`getRequirePath`的处理逻辑中，当传参数是`Identifier`标识符类型时，需要进一步找到变量的具体值。这部分逻辑在`getImportRequirePath`来完成。
+
+首先在当前作用域中找到该变量声明语句的位置
 ``` js
 const binding = scope.bindings[identifierName];
 const { parent } = binding.path;
 ```
 > `binding`的`path.parent`指向其声明语句
 
-这里要注意以下2种语法场景：
-##### 语法场景：导入语句
+在寻找变量值的过程中，需要注意以下两种声明语法场景：
+#### 语法场景：导入语句
 ``` js
 import modelA from './modelA';
 dvaIns.model(modelA);
 ```
-上例中，`modelA`由`import`声明创建。使用`importPath.source.value`获取引入路径`'./modelA'`。
-
-```js
+`modelA`的声明语句是`import`类型，使用`isImportDeclaration`来区分这种语法。然后在`importPath.source.value`中获取其导入路径`'./modelA'`。
+``` js
 const binding = scope.bindings[identifierName];
 // ...
 const { parent } = binding.path;
@@ -182,12 +192,12 @@ if (t.isImportDeclaration(parent)) {
 }
 ```
 
-##### 语法场景：变量声明
+##### 语法场景：导入表达式
 ``` js
 const modelB = require('./modelB');
 dvaIns.model(modelB);
 ```
-上例中`modelB`是一个`require`表达式，本质是变量，因此使用`VariableDeclaration`判断其类型。
+上例中`modelB`是一个`require`表达式，声明语句为变量声明，使用`isVariableDeclaration`以区分该类型。
 
 ``` js
 const binding = scope.bindings[identifierName];
@@ -208,30 +218,21 @@ if (t.isVariableDeclaration(parent)) {
 ```
 
 ### findDeclarator
-作用：查找变量声明
+作用：查找变量的声明
+在JS语法规范中，一条变量声明语句可以同时创建多个变量。因此需要注意以下情况，`otherModel`和`a`由一条语句声明。
 ``` js
 const otherModel = {
   namespace: 'other',
 }, a = 1;
 ```
-上例中，`otherModel`和`a`由一条语句声明，进行声明查找时需要注意这种情况。
-``` js
-function findDeclarator(declarations, identifier) {
-  for (const d of declarations) {
-    if (t.isIdentifier(d.id) && d.id.name === identifier) {
-      return d;
-    }
-  }
-}
-```
 
 ### isRequire和isRequireDefault
-用于区分，`getImportRequirePath`的`变量声明`场景中，以下2种语法。
+用于区分，`getImportRequirePath`的`变量声明`场景中，以下两种语法。
 - `require('./modelB')`
 - `require('./modelB').default`
 
 ### getArguments0
-针对函数调用语法，获取第1个参数的值
+针对函数调用语句，获取首个参数的值
 ``` js
 function getArguments0(node) {
     if (t.isLiteral(node.arguments[0])) {
